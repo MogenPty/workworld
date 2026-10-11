@@ -9,7 +9,7 @@ import {
 } from "./skills";
 import { CAREER_LEVELS, careerDimension, isTechnicalAtLeast } from "./levels";
 import { createTraitSet } from "./traits";
-import { evaluateCodeReview } from "./eligibility";
+import { evaluateCodeReview, evaluateCodeReviewAssignment, evaluateEligibility, CODE_REVIEW_RULE } from "./eligibility";
 
 describe("skills", () => {
   it("bounds are 0..100", () => {
@@ -84,17 +84,57 @@ describe("code review eligibility", () => {
     expect(evaluateCodeReview(senior, "primary").eligible).toBe(true);
     expect(evaluateCodeReview({ id: "l", level: "lead" }, "primary").eligible).toBe(true);
   });
-  it("intermediate leads only with senior+ supervisor present", () => {
-    expect(evaluateCodeReview(intermediate, "primary", [junior]).eligible).toBe(false);
-    expect(evaluateCodeReview(intermediate, "primary", [senior]).eligible).toBe(true);
+  it("a senior on the general roster does not satisfy supervision by itself", () => {
+    // Roster membership without an explicit supervisor assignment is insufficient.
+    const r = evaluateCodeReview(intermediate, "primary", [senior]);
+    expect(r.eligible).toBe(false);
     expect(evaluateCodeReview(intermediate, "primary", []).eligible).toBe(false);
   });
-  it("junior is secondary-only", () => {
+  it("unassigned supervisor fails", () => {
+    const r = evaluateCodeReviewAssignment(intermediate, [
+      { employee: junior, role: "secondary" },
+    ]);
+    expect(r.eligible).toBe(false);
+    expect(r.reasons.join(";")).toContain("supervisor");
+  });
+  it("valid supervision passes via supervisor or secondary role", () => {
+    expect(
+      evaluateCodeReview(intermediate, "primary", [], { supervisors: [senior] }).eligible,
+    ).toBe(true);
+    expect(
+      evaluateCodeReviewAssignment(intermediate, [{ employee: senior, role: "supervisor" }]).eligible,
+    ).toBe(true);
+    expect(
+      evaluateCodeReviewAssignment(intermediate, [{ employee: senior, role: "secondary" }]).eligible,
+    ).toBe(true);
+  });
+  it("unavailable supervisor fails when availability is required", () => {
+    const rule = { ...CODE_REVIEW_RULE, requiresAvailability: true };
+    const busy = { id: "s", level: "senior" as const, available: false };
+    const r = evaluateEligibility(rule, intermediate, "primary", [], { supervisors: [busy] });
+    expect(r.eligible).toBe(false);
+    expect(r.reasons.join(";")).toContain("not available");
+    // An available supervisor passes under the same rule.
+    const ok = evaluateEligibility(rule, intermediate, "primary", [], { supervisors: [senior] });
+    expect(ok.eligible).toBe(true);
+  });
+  it("junior is secondary-only, even with supervision", () => {
     expect(evaluateCodeReview(junior, "primary", [senior]).eligible).toBe(false);
+    expect(
+      evaluateCodeReview(junior, "primary", [], { supervisors: [senior] }).eligible,
+    ).toBe(false);
+    expect(
+      evaluateCodeReviewAssignment(junior, [{ employee: senior, role: "supervisor" }]).eligible,
+    ).toBe(false);
     expect(evaluateCodeReview(junior, "secondary").eligible).toBe(true);
   });
   it("intern cannot participate", () => {
     expect(evaluateCodeReview(intern, "primary").eligible).toBe(false);
     expect(evaluateCodeReview(intern, "secondary").eligible).toBe(false);
+  });
+  it("normal senior-led review with juniors participating", () => {
+    expect(evaluateCodeReview(senior, "primary").eligible).toBe(true);
+    expect(evaluateCodeReview(junior, "secondary").eligible).toBe(true);
+    expect(evaluateCodeReview(intermediate, "secondary").eligible).toBe(true);
   });
 });
