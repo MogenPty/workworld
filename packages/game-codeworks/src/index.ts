@@ -1,5 +1,6 @@
-import { SKILL_CATALOG } from "@workworld/career-systems";
+import { SKILL_CATALOG, TRAIT_CATALOG } from "@workworld/career-systems";
 import type { GameDefinition, GameMode, Scenario } from "@workworld/game-sdk";
+import { validateStartingCareer } from "@workworld/game-sdk";
 
 /**
  * CodeWorks: the initial software-industry career simulation game.
@@ -48,8 +49,10 @@ export const DEFAULT_SCENARIO: Scenario = {
   startingTick: 0,
   startingSeed: 20261010,
   startingResources: { funds: 1000, energy: 100, reputation: 0 },
-  startingSkills: { programming: 25, debugging: 20, communication: 30, testing: 15 },
-  startingTraits: { diligence: 60, creativity: 55, sociability: 50, adaptability: 60, "leadership-affinity": 40 },
+  startingCareer: {
+    skills: { programming: 25, debugging: 20, communication: 30, testing: 15 },
+    traits: { diligence: 60, creativity: 55, sociability: 50, adaptability: 60, "leadership-affinity": 40 },
+  },
   objectives: [
     { id: "settle-in", description: "Complete your first working day (32 ticks)." },
     { id: "first-review", description: "Observe a supervised code review." },
@@ -57,10 +60,15 @@ export const DEFAULT_SCENARIO: Scenario = {
   constraints: [
     { id: "work-hours", description: "Work is scheduled on Mon-Fri working days only." },
   ],
-} as Scenario & {
-  startingSkills: Record<string, number>;
-  startingTraits: Record<string, number>;
 };
+
+/** Starting career conditions for the default scenario, validated against the catalogs. */
+export function validateDefaultScenarioCareer(): string[] {
+  return validateStartingCareer(DEFAULT_SCENARIO.startingCareer, {
+    allowedSkillIds: SKILL_CATALOG.map((s) => s.id),
+    allowedTraitIds: TRAIT_CATALOG.map((t) => t.id),
+  });
+}
 
 export function registerAnotherModeNote(): string {
   return [

@@ -5,6 +5,7 @@ import {
   validateGameDefinition,
   validateGameMode,
   validateScenario,
+  validateStartingCareer,
   type GameDefinition,
   type GameMode,
   type Scenario,
@@ -70,5 +71,43 @@ describe("game-sdk contracts", () => {
     expect(() => reg.register(mode)).toThrow();
     expect(reg.get("agile", "0.1.0")).toEqual(mode);
     expect(reg.get("agile", "9.9.9")).toBeUndefined();
+  });
+  it("accepts valid starting career conditions", () => {
+    const withCareer: Scenario = {
+      ...scenario,
+      startingCareer: { skills: { programming: 25 }, traits: { diligence: 60 } },
+    };
+    expect(
+      validateScenario(withCareer, {
+        allowedSkillIds: ["programming"],
+        allowedTraitIds: ["diligence"],
+      }),
+    ).toEqual([]);
+    // Omitted startingCareer stays valid for games without a career system.
+    expect(validateScenario(scenario)).toEqual([]);
+  });
+  it("rejects invalid starting career conditions", () => {
+    const ctx = { allowedSkillIds: ["programming"], allowedTraitIds: ["diligence"] };
+    const unknownSkill: Scenario = {
+      ...scenario,
+      startingCareer: { skills: { mindreading: 10 }, traits: {} },
+    };
+    expect(validateScenario(unknownSkill, ctx).length).toBeGreaterThan(0);
+    const outOfRange: Scenario = {
+      ...scenario,
+      startingCareer: { skills: { programming: 101 }, traits: {} },
+    };
+    expect(validateScenario(outOfRange, ctx).length).toBeGreaterThan(0);
+    const nonInteger: Scenario = {
+      ...scenario,
+      startingCareer: { skills: {}, traits: { diligence: 60.5 } },
+    };
+    expect(validateScenario(nonInteger, ctx).length).toBeGreaterThan(0);
+    const malformed: Scenario = {
+      ...scenario,
+      startingCareer: { skills: ["programming"] } as unknown as { skills: Record<string, number>; traits: Record<string, number> },
+    };
+    expect(validateScenario(malformed, ctx).length).toBeGreaterThan(0);
+    expect(validateStartingCareer(null, ctx).length).toBeGreaterThan(0);
   });
 });

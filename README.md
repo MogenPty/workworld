@@ -6,7 +6,7 @@ deterministic simulation foundation + a Next.js development harness.
 
 ## Tooling
 
-- Node.js 20+ (tested with Node 26), pnpm 9.
+- Node.js >=22.12 (Vitest 5 requirement; tested with Node 26), pnpm 9.
 - TypeScript 5.9, Next.js 16 + React 19, Vitest 5, Vite 8, ESLint 10 (flat config).
 
 ## Setup

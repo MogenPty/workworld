@@ -22,7 +22,7 @@ export function createRng(seed: number, counter = 0): DeterministicRng {
     throw new RangeError(`counter must be a non-negative integer, got ${counter}`);
   }
   // Normalize to uint32.
-  let s = seed >>> 0;
+  const s = seed >>> 0;
   let c = counter;
   // NOTE: draws are a pure function of (s + c), so restoring at an
   // arbitrary counter needs no replay — continuation is O(1).

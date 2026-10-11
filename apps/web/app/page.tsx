@@ -28,11 +28,6 @@ import {
   type SaveStorage,
 } from "@workworld/persistence";
 
-const SCENARIO_DEFAULTS = DEFAULT_SCENARIO as unknown as {
-  startingSkills: Record<string, number>;
-  startingTraits: Record<string, number>;
-};
-
 function newSessionState() {
   return createSimulation({
     seed: DEFAULT_SCENARIO.startingSeed,
@@ -52,8 +47,8 @@ type Feedback = { kind: "success" | "error"; message: string } | null;
 
 export default function HarnessPage() {
   const [sim, setSim] = useState<SimulationState>(() => newSessionState());
-  const [skills] = useState(() => createSkillSet(SCENARIO_DEFAULTS.startingSkills ?? {}));
-  const [traits] = useState(() => createTraitSet(SCENARIO_DEFAULTS.startingTraits ?? {}));
+  const [skills] = useState(() => createSkillSet(DEFAULT_SCENARIO.startingCareer?.skills ?? {}));
+  const [traits] = useState(() => createTraitSet(DEFAULT_SCENARIO.startingCareer?.traits ?? {}));
   const [running, setRunning] = useState(false);
   const [saveName, setSaveName] = useState("dev-save-1");
   const [saves, setSaves] = useState<Array<{ name: string; savedAt: string }>>([]);
@@ -193,9 +188,9 @@ export default function HarnessPage() {
           <strong>{formatDate(sim.tick)}</strong> · tick {sim.tick}
         </p>
         <p>
-          Time {formatTime(sim.tick)} · working day {cal.workingDayInMonth || "—"}/20 · week{" "}
+          Time {formatTime(sim.tick)} · working day {cal.workingDayInMonth}/20 · week{" "}
           {cal.weekInMonth}/4 · month {cal.month} · working days elapsed {countWorkingDays(sim.tick)} ·{" "}
-          {cal.isWorkingDay ? "working day" : "weekend (no work scheduled)"}
+          working time (Mon–Fri 09:00–17:00)
         </p>
         <p style={{ color: "#9fb0cc" }}>
           Status: {running ? "running (1 tick / 3s, normal speed)" : "paused"} · seed {sim.seed}

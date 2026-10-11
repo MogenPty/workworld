@@ -22,13 +22,17 @@ The core never depends on the app, CodeWorks content, or browser APIs.
 
 ## Simulation clock (locked)
 
-- 1 tick = 15 in-game minutes. Integer tick arithmetic only.
+- 1 tick = 15 in-game minutes. Integer tick arithmetic only. A tick
+  identifies the START of its interval (tick 0 = Monday 09:00-09:15).
 - Normal speed: 1 real second = 5 in-game minutes → 1 tick = 3 real seconds.
 - 1 hour = 4 ticks · 8h working day = 32 ticks · 5-day week = 160 ticks · 4-week month = 640 ticks.
-- Calendar: 4 weeks × 7 days = 28-day month; Mon–Fri are working days (20/month).
+- The clock advances only through scheduled working time (Mon–Fri,
+  09:00–17:00). Overnight periods and weekends are skipped in the calendar
+  mapping: tick 31 = Mon 16:45, tick 32 = Tue 09:00, tick 160 = next Monday
+  09:00, tick 640 = next month Monday 09:00.
+- Calendar: 4 weeks × 7 cells = 28-cell month grid; 20 working days/month
+  (weekend cells skipped, so working ticks never display Sat/Sun).
 - Tick 0 = Month 1, Week 1, Monday 09:00.
-- The clock advances uniformly through nights/weekends; **scheduling layers must
-  consult `isWorkingDay`/`isWorkingTick` and skip non-working periods explicitly**.
 - Advancement is only via `advanceTicks(state, n)` with non-negative integer `n`.
 - Identical (state, seed, commands) ⇒ identical resulting state.
 

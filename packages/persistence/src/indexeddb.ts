@@ -18,7 +18,14 @@ function openDb(): Promise<IDBDatabase> {
     }
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME, { keyPath: "name" });
+      // Guarded so future version bumps (DB_VERSION + 1, + 2, ...) add new
+      // stores without dropping or breaking this one. There are no
+      // migrations between save schema versions yet; when SAVE_SCHEMA_VERSION
+      // advances, add version-gated migration steps here.
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "name" });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error("failed to open IndexedDB"));
@@ -42,6 +49,7 @@ function tx<T>(db: IDBDatabase, mode: IDBTransactionMode, run: (store: IDBObject
     }
     transaction.oncomplete = () => resolve(value);
     transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB transaction failed"));
+    transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB transaction aborted"));
   });
 }
 
@@ -71,8 +79,16 @@ export class IndexedDbStorage implements SaveStorage {
   async list(): Promise<Array<{ name: string; savedAt: string }>> {
     const db = await openDb();
     try {
-      const all = await tx<SaveData[]>(db, "readonly", (store) => store.getAll());
-      return all.map((s) => ({ name: s.name, savedAt: s.savedAt }));
+      const all = await tx<unknown>(db, "readonly", (store) => store.getAll() as IDBRequest<unknown>);
+      if (!Array.isArray(all)) return [];
+      const entries: Array<{ name: string; savedAt: string }> = [];
+      for (const item of all) {
+        if (typeof item !== "object" || item === null || Array.isArray(item)) continue;
+        const record = item as Record<string, unknown>;
+        if (typeof record["name"] !== "string" || typeof record["savedAt"] !== "string") continue;
+        entries.push({ name: record["name"], savedAt: record["savedAt"] });
+      }
+      return entries;
     } finally {
       db.close();
     }
